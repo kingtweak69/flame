@@ -16,7 +16,8 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    'flash-linear-attention',
+    'flash-linear-attention @ git+https://github.com/fla-org/flash-linear-attention.git@v0.5.2',
+    'torchtitan @ git+https://github.com/pytorch/torchtitan.git@0b44d4c',
     'torch',
     'torchdata',
     'transformers<5.0',
@@ -24,6 +25,7 @@ dependencies = [
     'datasets>=3.5.0',
     'einops',
     'ninja',
+    'tyro',
     'wandb',
     'tiktoken',
     'tensorboard',
