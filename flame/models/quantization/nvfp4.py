@@ -59,7 +59,7 @@ class NvFp4Converter(ModelConverter):
         self.enabled = False
 
         try:
-            from torchao.prototype.moe_training.nvfp4_training.nvfp4_training import (  # noqa: F401
+            from torchao.prototype.moe_training.nvfp4_training.nvfp4_training import (
                 NVFP4TrainingConfig,
             )
         except ImportError as e:
@@ -73,9 +73,6 @@ class NvFp4Converter(ModelConverter):
             getattr(nvfp4_config, "filter_fqns", []) if nvfp4_config is not None else []
         )
 
-        from torchao.prototype.moe_training.nvfp4_training.nvfp4_training import (
-            NVFP4TrainingConfig,
-        )
         self.config = NVFP4TrainingConfig()
         self.enabled = True
         logger.info("NVFP4 quantized training converter initialized")
