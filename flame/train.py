@@ -511,7 +511,7 @@ def main(job_config: JobConfig):
 
                 losses.append(loss)
             loss = sum(losses)
-            aux_loss = sum(aux_losses) if aux_losses else None
+            aux_loss = sum(aux_losses) if len(aux_losses) > 0 else None
 
             # clip gradients
             grad_norm = dist_utils.clip_grad_norm_(
