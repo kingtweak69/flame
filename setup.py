@@ -37,9 +37,9 @@ setup(
     python_requires='>=3.10',
     install_requires=[
         'flash-linear-attention',
-        'torch>=2.7',
+        'torch',
         'torchdata',
-        'transformers>=4.46.0',
+        'transformers<5.0',
         'triton>=3.1.0',
         'datasets>=3.5.0',
         'einops',
@@ -47,5 +47,7 @@ setup(
         'wandb',
         'tiktoken',
         'tensorboard',
+        'bitsandbytes',
+        'nvidia-modelopt',
     ],
 )
