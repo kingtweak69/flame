@@ -798,6 +798,44 @@ class JobConfig:
             """,
         )
 
+        # nvfp4 configs
+        self.parser.add_argument(
+            "--nvfp4.filter_fqns",
+            type=string_list,
+            nargs="+",
+            default=[],
+            help="""
+                Comma-separated list of FQN substrings identifying modules to skip
+                when applying NVFP4 quantization. For example, 'lm_head' will prevent
+                the language model head from being converted to NVFP4Linear.
+            """,
+        )
+
+        # bitsandbytes (bnb) configs
+        self.parser.add_argument(
+            "--bnb.quant_type",
+            type=str,
+            default="int8",
+            choices=["int8", "fp4", "nf4"],
+            help="""
+                Quantization type for BitsAndBytes conversion.
+                'int8': LLM.int8() 8-bit quantization (Linear8bitLt).
+                'fp4':  FP4 4-bit quantization (LinearFP4).
+                'nf4':  NF4 4-bit quantization from QLoRA (LinearNF4).
+            """,
+        )
+        self.parser.add_argument(
+            "--bnb.filter_fqns",
+            type=string_list,
+            nargs="+",
+            default=[],
+            help="""
+                Comma-separated list of FQN substrings identifying modules to skip
+                when applying BitsAndBytes quantization. For example, 'lm_head' will
+                prevent the language model head from being converted.
+            """,
+        )
+
         # communications library settings
         self.parser.add_argument(
             "--comm.init_timeout_seconds",

@@ -35,6 +35,7 @@ from flame.config_manager import JobConfig
 from flame.data import build_dataloader, build_dataset
 from flame.models.parallelize_fla import parallelize_fla
 from flame.models.pipeline_fla import pipeline_fla
+import flame.models.quantization  # noqa: F401 — registers nvfp4 and bnb converters
 from flame.tools.utils import get_nparams_and_flops
 
 
@@ -408,6 +409,7 @@ def main(job_config: JobConfig):
             optimizers.zero_grad()
 
             losses = []
+            aux_losses = []
             # do gradient accumulation if enabled
             for _ in range(job_config.training.gradient_accumulation_steps):
                 # get batch
@@ -501,9 +503,16 @@ def main(job_config: JobConfig):
                             / job_config.training.gradient_accumulation_steps
                         )
                         loss.backward()
+                    aux_loss = getattr(output, 'aux_loss', None)
+                    if aux_loss is not None:
+                        aux_losses.append(
+                            aux_loss.detach()
+                            / job_config.training.gradient_accumulation_steps
+                        )
 
                 losses.append(loss)
             loss = sum(losses)
+            aux_loss = sum(aux_losses) if len(aux_losses) > 0 else None
 
             # clip gradients
             grad_norm = dist_utils.clip_grad_norm_(
@@ -546,9 +555,15 @@ def main(job_config: JobConfig):
                             world_mesh["dp_cp"],
                         ),
                     )
+                    if aux_loss is not None:
+                        global_avg_aux_loss = dist_utils.dist_mean(
+                            aux_loss, world_mesh["dp_cp"]
+                        )
                 else:
                     # Scale back the loss before logging
                     global_avg_loss = global_max_loss = loss.item()
+                    if aux_loss is not None:
+                        global_avg_aux_loss = aux_loss.item()
 
                 # Update train state tokens and elapsed time
                 time_now = time.perf_counter()
@@ -572,15 +587,18 @@ def main(job_config: JobConfig):
                     * (job_config.training.steps - train_state.step)
                     / train_state.step
                 )
+                extra_metrics = {
+                    "optimizer/lr": last_lr,
+                    "optimizer/grad_norm": grad_norm.item(),
+                    "optimizer/skipped_step": train_state.skipped_step,
+                }
+                if aux_loss is not None:
+                    extra_metrics["loss/aux_loss"] = global_avg_aux_loss
                 metric_logger.log(
                     train_state.step,
                     global_avg_loss,
                     global_max_loss,
-                    extra_metrics={
-                        "optimizer/lr": last_lr,
-                        "optimizer/grad_norm": grad_norm.item(),
-                        "optimizer/skipped_step": train_state.skipped_step,
-                    },
+                    extra_metrics=extra_metrics,
                 )
 
                 logger.info(
