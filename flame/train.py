@@ -35,6 +35,7 @@ from flame.config_manager import JobConfig
 from flame.data import build_dataloader, build_dataset
 from flame.models.parallelize_fla import parallelize_fla
 from flame.models.pipeline_fla import pipeline_fla
+import flame.models.quantization  # noqa: F401 — registers nvfp4 and bnb converters
 from flame.tools.utils import get_nparams_and_flops
 
 
