@@ -10,8 +10,9 @@ from datetime import timedelta
 import fla  # noqa
 import torch
 import torch.serialization
+from accelerate.utils import init_empty_weights
 from torch.distributed.checkpoint.format_utils import dcp_to_torch_save
-from torchtitan.tools.logging import init_logger, logger
+from flame.logging import init_logger, logger
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 import custom_models
@@ -41,7 +42,11 @@ def save_pretrained(
         dcp_to_torch_save(checkpoint, checkpoint_path)
 
         logger.info(f"Initializing the model from config\n{config}")
-        model = AutoModelForCausalLM.from_config(config)
+        with init_empty_weights():
+            model = AutoModelForCausalLM.from_config(config)
+        # Allocate CPU storage without initializing values; the state dict
+        # loaded below will fill in the actual weights.
+        model.to_empty(device="cpu")
         logger.info(model)
         logger.info("Loading state dict from the checkpoint")
 

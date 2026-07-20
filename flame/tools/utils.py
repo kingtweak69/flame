@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from torch import nn
-from torchtitan.tools.logging import logger
+from flame.logging import logger
 
 
 def get_nparams_and_flops(model: nn.Module, model_config, seq_len: int) -> tuple[int, int]:

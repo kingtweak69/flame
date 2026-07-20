@@ -25,10 +25,10 @@ jobs:
 
       - name: Install dependencies
         # CPU-only torch + the subset of runtime deps that `flame.data` actually
-        # touches. We skip flash-linear-attention / triton (need CUDA) and
-        # torchtitan (stubbed by tests/conftest.py). `datasets` is pinned to
-        # <4.0 because `flame.data` imports `ShufflingConfig` from
-        # `datasets.iterable_dataset`, which was removed in 4.x.
+        # touches. We skip flash-linear-attention / triton (need CUDA).
+        # `datasets` is pinned to <4.0 because `flame.data` imports
+        # `ShufflingConfig` from `datasets.iterable_dataset`, which was removed
+        # in 4.x.
         run: |
           python -m pip install -U pip
           python -m pip install --index-url https://download.pytorch.org/whl/cpu torch

@@ -3,15 +3,14 @@
 Tests verifying that model loading paths in flame work correctly with the
 transformers <5.0 constraint.
 
-These tests mock out heavy dependencies (torch, transformers, fla, torchtitan)
-so they run in a lightweight CI environment without a GPU.
+These tests mock out heavy dependencies (torch, transformers, fla) so they
+run in a lightweight CI environment without a GPU.
 """
 from __future__ import annotations
 
 import sys
 import types
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,7 +20,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 def _install_stubs() -> None:
-    """Install lightweight stubs for torch, transformers, fla, and torchtitan."""
+    """Install lightweight stubs for torch, transformers, and fla."""
 
     # --- torch ---
     if "torch" not in sys.modules:
@@ -54,18 +53,6 @@ def _install_stubs() -> None:
 
     # --- fla ---
     sys.modules.setdefault("fla", types.ModuleType("fla"))
-
-    # --- torchtitan.tools.logging ---
-    tt = sys.modules.setdefault("torchtitan", types.ModuleType("torchtitan"))
-    tt_tools = sys.modules.setdefault("torchtitan.tools", types.ModuleType("torchtitan.tools"))
-    tt_tools_logging = sys.modules.setdefault(
-        "torchtitan.tools.logging", types.ModuleType("torchtitan.tools.logging")
-    )
-    import logging as _logging
-    tt_tools_logging.logger = _logging.getLogger("flame.test")
-    tt_tools_logging.init_logger = MagicMock()
-    tt.tools = tt_tools
-    tt_tools.logging = tt_tools_logging
 
 
 _install_stubs()
@@ -148,4 +135,3 @@ class TestConvertHfWeights:
         mod.convert_hf_weights("org/my-model", tmp_path)
 
         fake_model.state_dict.assert_called_once()
-

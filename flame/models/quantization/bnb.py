@@ -25,14 +25,12 @@ Usage:
     # filter_fqns = []         # Optional: FQN substrings to skip
 """
 
-from typing import List, Type, Union
+from typing import List, Type
 
 import torch.nn as nn
 
-from torchtitan.config_manager import JobConfig
-from torchtitan.distributed import ParallelDims
-from torchtitan.protocols.model_converter import ModelConverter, register_model_converter
-from torchtitan.tools.logging import logger
+from flame.logging import logger
+from flame.models.converter import ModelConverter, register_model_converter
 
 VALID_QUANT_TYPES = ("int8", "fp4", "nf4")
 
@@ -51,7 +49,7 @@ class BitsAndBytesConverter(ModelConverter):
         filter_fqns (list[str]): FQN substrings of modules to skip. Default: [].
     """
 
-    def __init__(self, job_config: JobConfig, parallel_dims: ParallelDims):
+    def __init__(self, job_config):
         self.enabled = False
 
         try:
@@ -118,7 +116,7 @@ class BitsAndBytesConverter(ModelConverter):
         self._replace_linear_layers(model, linear_cls)
         logger.info(f"Swapped to BitsAndBytes {self.quant_type} layers")
 
-    def post_optimizer_hook(self, model: Union[nn.Module, List[nn.Module]]) -> None:
+    def post_optimizer_hook(self, model: nn.Module) -> None:
         """BitsAndBytes does not require any post-optimizer hooks."""
         return
 
