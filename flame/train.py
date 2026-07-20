@@ -16,7 +16,7 @@ from datetime import timedelta
 import fla  # noqa
 import torch
 from accelerate import Accelerator
-from accelerate.utils import set_seed
+from accelerate.utils import init_empty_weights, set_seed
 from fla.modules.fused_linear_cross_entropy import FusedLinearCrossEntropyLoss
 from fla.ops.utils import prepare_position_ids
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
@@ -251,7 +251,22 @@ def main(job_config: JobConfig) -> None:
             f"Building model\n{color.green}{model_config}{color.reset}"
         )
 
-    model = AutoModelForCausalLM.from_config(model_config)
+    # Build model structure on the meta device (no memory allocated yet), then
+    # materialize and initialize weights on CPU.  This mirrors the upstream
+    # torchtitan approach (`with torch.device("meta"):`) but uses Accelerate's
+    # `init_empty_weights()` so the pattern is consistent with the rest of the
+    # Accelerate-based training loop.
+    with init_empty_weights():
+        model = AutoModelForCausalLM.from_config(model_config)
+        # Defer weight initialization: post_init() was already called inside
+        # __init__ on meta tensors (a no-op), so we reset the flag here so
+        # that the real initialization runs after we materialize the weights.
+        model.apply(lambda m: setattr(m, "_is_hf_initialized", False))
+
+    # Materialize parameters into CPU RAM, then initialize weights.
+    model.to_empty(device="cpu")
+    with torch.no_grad():
+        model.post_init()
 
     if (
         getattr(model_config, "fuse_linear_cross_entropy", False)
