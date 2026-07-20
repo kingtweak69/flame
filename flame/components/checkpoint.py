@@ -11,7 +11,12 @@ from typing import Any, Dict, List
 
 @dataclass
 class TrainState:
-    """Lightweight training-state container saved alongside model checkpoints."""
+    """Lightweight training-state container saved alongside model checkpoints.
+
+    ``state_dict`` / ``load_state_dict`` mirror the PyTorch convention so this
+    object can be serialised to / deserialised from a plain JSON file in the
+    checkpoint directory.
+    """
 
     step: int = 0
     skipped_step: int = 0

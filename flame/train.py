@@ -39,8 +39,8 @@ import flame.models.quantization  # noqa: F401 — registers bnb and nvfp4 conve
 
 _DTYPE_TO_MIXED_PRECISION = {
     "bfloat16": "bf16",
-    "float16":  "fp16",
-    "float32":  "no",
+    "float16": "fp16",
+    "float32": "no",
 }
 
 

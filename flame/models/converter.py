@@ -8,7 +8,7 @@ model-conversion plugins have no torchtitan dependency.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Type, Union
+from typing import Dict, List, Type
 
 import torch.nn as nn
 
@@ -29,7 +29,7 @@ class ModelConverter(ABC):
     def convert(self, model: nn.Module) -> None:
         """Apply the conversion to *model* in-place (called before training)."""
 
-    def post_optimizer_hook(self, model: Union[nn.Module, List[nn.Module]]) -> None:
+    def post_optimizer_hook(self, model: nn.Module) -> None:
         """Optional hook called after every optimizer step."""
 
 
@@ -43,7 +43,7 @@ class ModelConverterGroup:
         for c in self._converters:
             c.convert(model)
 
-    def post_optimizer_hook(self, model: Union[nn.Module, List[nn.Module]]) -> None:
+    def post_optimizer_hook(self, model: nn.Module) -> None:
         for c in self._converters:
             c.post_optimizer_hook(model)
 

@@ -25,7 +25,7 @@ Usage:
     # filter_fqns = []         # Optional: FQN substrings to skip
 """
 
-from typing import List, Type, Union
+from typing import List, Type
 
 import torch.nn as nn
 
@@ -116,7 +116,7 @@ class BitsAndBytesConverter(ModelConverter):
         self._replace_linear_layers(model, linear_cls)
         logger.info(f"Swapped to BitsAndBytes {self.quant_type} layers")
 
-    def post_optimizer_hook(self, model: Union[nn.Module, List[nn.Module]]) -> None:
+    def post_optimizer_hook(self, model: nn.Module) -> None:
         """BitsAndBytes does not require any post-optimizer hooks."""
         return
 

@@ -169,4 +169,5 @@ def get_components_name(model: nn.Module, component_name: str):
             return "lm_head"
         logger.warning("No lm_head found in model")
         return None
-    raise ValueError(f"Unknown component_name: {component_name}")
+    logger.warning(f"Unknown component_name requested: {component_name}")
+    return None

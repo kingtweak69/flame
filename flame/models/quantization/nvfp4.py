@@ -20,7 +20,7 @@ Usage:
 """
 
 from functools import partial
-from typing import List, Union
+from typing import List
 
 import torch.nn as nn
 
@@ -89,7 +89,7 @@ class NvFp4Converter(ModelConverter):
         )
         logger.info("Swapped to NVFP4Linear layers for quantized training")
 
-    def post_optimizer_hook(self, model: Union[nn.Module, List[nn.Module]]):
+    def post_optimizer_hook(self, model: nn.Module) -> None:
         """NVFP4 does not require any post-optimizer hooks."""
         return
 
