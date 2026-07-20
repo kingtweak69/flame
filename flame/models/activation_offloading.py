@@ -14,7 +14,7 @@ import torch
 from torch import nn
 from torch.autograd.graph import saved_tensors_hooks
 
-from torchtitan.tools.logging import logger
+from flame.logging import logger
 
 try:
     import torchao

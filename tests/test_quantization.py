@@ -9,83 +9,15 @@ training stack.
 from __future__ import annotations
 
 import sys
-import types
 from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
 import torch.nn as nn
 
-
-# ---------------------------------------------------------------------------
-# Stubs: torchtitan is not available in the lightweight test environment
-# ---------------------------------------------------------------------------
-
-def _install_torchtitan_stubs() -> None:
-    """Install minimal torchtitan stubs needed by the quantization converters."""
-    try:
-        import torchtitan.protocols.model_converter  # noqa: F401
-        return
-    except Exception:
-        pass
-
-    # torchtitan top-level
-    tt = sys.modules.setdefault("torchtitan", types.ModuleType("torchtitan"))
-
-    # torchtitan.tools.logging
-    tt_tools = sys.modules.setdefault("torchtitan.tools", types.ModuleType("torchtitan.tools"))
-    tt_tools_logging = sys.modules.setdefault(
-        "torchtitan.tools.logging", types.ModuleType("torchtitan.tools.logging")
-    )
-    import logging
-    tt_tools_logging.logger = logging.getLogger("flame.test")
-    tt_tools.logging = tt_tools_logging
-    tt.tools = tt_tools
-
-    # torchtitan.config_manager
-    tt_cfg = sys.modules.setdefault(
-        "torchtitan.config_manager", types.ModuleType("torchtitan.config_manager")
-    )
-    tt_cfg.JobConfig = object
-    tt.config_manager = tt_cfg
-
-    # torchtitan.distributed
-    tt_dist = sys.modules.setdefault(
-        "torchtitan.distributed", types.ModuleType("torchtitan.distributed")
-    )
-    tt_dist.ParallelDims = object
-    tt.distributed = tt_dist
-
-    # torchtitan.protocols
-    tt_proto = sys.modules.setdefault(
-        "torchtitan.protocols", types.ModuleType("torchtitan.protocols")
-    )
-    tt.protocols = tt_proto
-
-    # torchtitan.protocols.model_converter
-    _registry: dict = {}
-
-    class _ModelConverter:
-        pass
-
-    def _register_model_converter(cls, name):
-        _registry[name] = cls
-
-    tt_mc = sys.modules.setdefault(
-        "torchtitan.protocols.model_converter",
-        types.ModuleType("torchtitan.protocols.model_converter"),
-    )
-    tt_mc.ModelConverter = _ModelConverter
-    tt_mc.register_model_converter = _register_model_converter
-    tt_mc._registry = _registry
-    tt_proto.model_converter = tt_mc
-
-
-_install_torchtitan_stubs()
-
-# Now import the converters under test (after stubs are in place)
-from flame.models.quantization.bnb import BitsAndBytesConverter, VALID_QUANT_TYPES  # noqa: E402
-from flame.models.quantization.nvfp4 import NvFp4Converter  # noqa: E402
+# converters import from flame.logging and flame.models.converter — no torchtitan needed
+from flame.models.quantization.bnb import BitsAndBytesConverter, VALID_QUANT_TYPES
+from flame.models.quantization.nvfp4 import NvFp4Converter
 
 
 # ---------------------------------------------------------------------------
@@ -128,13 +60,15 @@ class TestNvFp4ConverterInit:
     def test_raises_when_torchao_missing(self):
         """NvFp4Converter should raise ImportError when torchao is absent."""
         cfg = _make_job_config()
-        with patch.dict(sys.modules, {"torchao": None,
-                                       "torchao.prototype": None,
-                                       "torchao.prototype.moe_training": None,
-                                       "torchao.prototype.moe_training.nvfp4_training": None,
-                                       "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": None}):
+        with patch.dict(sys.modules, {
+            "torchao": None,
+            "torchao.prototype": None,
+            "torchao.prototype.moe_training": None,
+            "torchao.prototype.moe_training.nvfp4_training": None,
+            "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": None,
+        }):
             with pytest.raises(ImportError, match="torchao"):
-                NvFp4Converter(cfg, parallel_dims=None)
+                NvFp4Converter(cfg)
 
     def test_reads_filter_fqns_from_config(self):
         """filter_fqns are read from job_config.nvfp4.filter_fqns."""
@@ -143,19 +77,16 @@ class TestNvFp4ConverterInit:
         mock_config_cls = MagicMock()
         mock_config_cls.return_value = MagicMock()
 
-        with patch.dict(
-            sys.modules,
-            {
-                "torchao": MagicMock(),
-                "torchao.prototype": MagicMock(),
-                "torchao.prototype.moe_training": MagicMock(),
-                "torchao.prototype.moe_training.nvfp4_training": MagicMock(),
-                "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": MagicMock(
-                    NVFP4TrainingConfig=mock_config_cls
-                ),
-            },
-        ):
-            conv = NvFp4Converter(cfg, parallel_dims=None)
+        with patch.dict(sys.modules, {
+            "torchao": MagicMock(),
+            "torchao.prototype": MagicMock(),
+            "torchao.prototype.moe_training": MagicMock(),
+            "torchao.prototype.moe_training.nvfp4_training": MagicMock(),
+            "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": MagicMock(
+                NVFP4TrainingConfig=mock_config_cls
+            ),
+        }):
+            conv = NvFp4Converter(cfg)
 
         assert conv.filter_fqns == ["lm_head", "embed"]
         assert conv.enabled is True
@@ -167,19 +98,16 @@ class TestNvFp4ConverterInit:
         mock_config_cls = MagicMock()
         mock_config_cls.return_value = MagicMock()
 
-        with patch.dict(
-            sys.modules,
-            {
-                "torchao": MagicMock(),
-                "torchao.prototype": MagicMock(),
-                "torchao.prototype.moe_training": MagicMock(),
-                "torchao.prototype.moe_training.nvfp4_training": MagicMock(),
-                "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": MagicMock(
-                    NVFP4TrainingConfig=mock_config_cls
-                ),
-            },
-        ):
-            conv = NvFp4Converter(cfg, parallel_dims=None)
+        with patch.dict(sys.modules, {
+            "torchao": MagicMock(),
+            "torchao.prototype": MagicMock(),
+            "torchao.prototype.moe_training": MagicMock(),
+            "torchao.prototype.moe_training.nvfp4_training": MagicMock(),
+            "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": MagicMock(
+                NVFP4TrainingConfig=mock_config_cls
+            ),
+        }):
+            conv = NvFp4Converter(cfg)
 
         assert conv.filter_fqns == []
 
@@ -191,19 +119,16 @@ class TestNvFp4ConverterConvert:
         mock_config_cls = MagicMock()
         mock_config_cls.return_value = MagicMock()
 
-        with patch.dict(
-            sys.modules,
-            {
-                "torchao": MagicMock(),
-                "torchao.prototype": MagicMock(),
-                "torchao.prototype.moe_training": MagicMock(),
-                "torchao.prototype.moe_training.nvfp4_training": MagicMock(),
-                "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": MagicMock(
-                    NVFP4TrainingConfig=mock_config_cls
-                ),
-            },
-        ):
-            return NvFp4Converter(cfg, parallel_dims=None)
+        with patch.dict(sys.modules, {
+            "torchao": MagicMock(),
+            "torchao.prototype": MagicMock(),
+            "torchao.prototype.moe_training": MagicMock(),
+            "torchao.prototype.moe_training.nvfp4_training": MagicMock(),
+            "torchao.prototype.moe_training.nvfp4_training.nvfp4_training": MagicMock(
+                NVFP4TrainingConfig=mock_config_cls
+            ),
+        }):
+            return NvFp4Converter(cfg)
 
     def test_convert_calls_quantize(self):
         """convert() should call torchao.quantization.quantize_ on the model."""
@@ -248,7 +173,7 @@ class TestBitsAndBytesConverterInit:
         cfg = _make_job_config()
         with patch.dict(sys.modules, {"bitsandbytes": None}):
             with pytest.raises(ImportError, match="bitsandbytes"):
-                BitsAndBytesConverter(cfg, parallel_dims=None)
+                BitsAndBytesConverter(cfg)
 
     @pytest.mark.parametrize("quant_type", VALID_QUANT_TYPES)
     def test_accepts_valid_quant_types(self, quant_type):
@@ -256,7 +181,7 @@ class TestBitsAndBytesConverterInit:
         cfg = _make_job_config(bnb={"quant_type": quant_type, "filter_fqns": []})
         mock_bnb = MagicMock()
         with patch.dict(sys.modules, {"bitsandbytes": mock_bnb}):
-            conv = BitsAndBytesConverter(cfg, parallel_dims=None)
+            conv = BitsAndBytesConverter(cfg)
         assert conv.quant_type == quant_type
         assert conv.enabled is True
 
@@ -266,14 +191,14 @@ class TestBitsAndBytesConverterInit:
         mock_bnb = MagicMock()
         with patch.dict(sys.modules, {"bitsandbytes": mock_bnb}):
             with pytest.raises(ValueError, match="bogus"):
-                BitsAndBytesConverter(cfg, parallel_dims=None)
+                BitsAndBytesConverter(cfg)
 
     def test_default_quant_type_is_int8(self):
         """quant_type defaults to 'int8' when no bnb config section is present."""
         cfg = MagicMock(spec=[])  # no attributes
         mock_bnb = MagicMock()
         with patch.dict(sys.modules, {"bitsandbytes": mock_bnb}):
-            conv = BitsAndBytesConverter(cfg, parallel_dims=None)
+            conv = BitsAndBytesConverter(cfg)
         assert conv.quant_type == "int8"
 
     def test_reads_filter_fqns_from_config(self):
@@ -281,7 +206,7 @@ class TestBitsAndBytesConverterInit:
         cfg = _make_job_config(bnb={"quant_type": "int8", "filter_fqns": ["lm_head"]})
         mock_bnb = MagicMock()
         with patch.dict(sys.modules, {"bitsandbytes": mock_bnb}):
-            conv = BitsAndBytesConverter(cfg, parallel_dims=None)
+            conv = BitsAndBytesConverter(cfg)
         assert conv.filter_fqns == ["lm_head"]
 
 
@@ -312,7 +237,7 @@ class TestBitsAndBytesConverterConvert:
         cfg = _make_job_config(bnb={"quant_type": quant_type, "filter_fqns": filter_fqns or []})
         mock_bnb = self._make_mock_bnb()
         with patch.dict(sys.modules, {"bitsandbytes": mock_bnb}):
-            conv = BitsAndBytesConverter(cfg, parallel_dims=None)
+            conv = BitsAndBytesConverter(cfg)
         # Attach the mock so convert() can use the same classes
         conv._mock_bnb = mock_bnb
         return conv

@@ -6,15 +6,13 @@
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from io import BytesIO
 from typing import Any, Dict, List
-
-import torch
-from torch.distributed.checkpoint.stateful import Stateful
 
 
 @dataclass
-class TrainState(Stateful):
+class TrainState:
+    """Lightweight training-state container saved alongside model checkpoints."""
+
     step: int = 0
     skipped_step: int = 0
     token: int = 0
@@ -24,36 +22,21 @@ class TrainState(Stateful):
     log_steps: List[int] = field(default_factory=list)
 
     def state_dict(self) -> Dict[str, Any]:
-        # Only checkpoint global_avg_losses and global_max_losses per log frequency
-        # to avoid sync overhead in every iteration.
-        global_avg_losses_bytes = BytesIO()
-        torch.save(self.global_avg_losses, global_avg_losses_bytes)
-        global_max_losses_bytes = BytesIO()
-        torch.save(self.global_max_losses, global_max_losses_bytes)
-        log_steps_bytes = BytesIO()
-        torch.save(self.log_steps, log_steps_bytes)
         return {
-            "step": torch.tensor(self.step, dtype=torch.int32),
-            "skipped_step": torch.tensor(self.skipped_step, dtype=torch.int32),
-            "token": torch.tensor(self.token, dtype=torch.int64),
-            "elapsed": self.elapsed,
-            "global_avg_losses": global_avg_losses_bytes,
-            "global_max_losses": global_max_losses_bytes,
-            "log_steps": log_steps_bytes,
+            "step": self.step,
+            "skipped_step": self.skipped_step,
+            "token": self.token,
+            "elapsed_seconds": self.elapsed.total_seconds(),
+            "global_avg_losses": self.global_avg_losses,
+            "global_max_losses": self.global_max_losses,
+            "log_steps": self.log_steps,
         }
 
-    def load_state_dict(self, state_dict) -> None:
-        self.step = state_dict["step"].item()
-        self.skipped_step = state_dict.get("skipped_step", 0).item()
-        self.token = state_dict["token"].item()
-        self.elapsed = state_dict["elapsed"]
-        state_dict["global_avg_losses"].seek(0)
-        self.global_avg_losses = torch.load(
-            state_dict["global_avg_losses"], weights_only=False
-        )
-        state_dict["global_max_losses"].seek(0)
-        self.global_max_losses = torch.load(
-            state_dict["global_max_losses"], weights_only=False
-        )
-        state_dict["log_steps"].seek(0)
-        self.log_steps = torch.load(state_dict["log_steps"], weights_only=False)
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self.step = int(state_dict["step"])
+        self.skipped_step = int(state_dict.get("skipped_step", 0))
+        self.token = int(state_dict["token"])
+        self.elapsed = timedelta(seconds=float(state_dict.get("elapsed_seconds", 0)))
+        self.global_avg_losses = list(state_dict.get("global_avg_losses", []))
+        self.global_max_losses = list(state_dict.get("global_max_losses", []))
+        self.log_steps = list(state_dict.get("log_steps", []))

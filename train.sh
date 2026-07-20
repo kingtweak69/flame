@@ -10,7 +10,6 @@ fi
 # NNODE=1 NGPU=8 LOG_RANK=0 ./train.sh
 NNODE=${NNODE:-"1"}
 NGPU=${NGPU:-"8"}
-LOG_RANK=${LOG_RANK:-0}
 
 if [[ -z "${MASTER_ADDR}" ]]; then
   export MASTER_ADDR="localhost"
@@ -26,7 +25,7 @@ bash train.sh -h
 
 Training a 340M model:
 
-NNODE=1 NGPU=8 LOG_RANK=0 bash train.sh \
+NNODE=1 NGPU=8 bash train.sh \
   --job.config_file flame/models/fla.toml \
   --job.dump_folder exp/transformer-340M-10B/batch32.seqlen2048.warmup1024.update1.steps20480.lr3e-4 \
   --model.config configs/transformer_340M.json \
@@ -51,11 +50,13 @@ NNODE=1 NGPU=8 LOG_RANK=0 bash train.sh \
   --training.prefetch_factor 2 \
   --training.seed 42 \
   --training.compile \
-  --training.tensor_parallel_degree 1 \
-  --training.disable_loss_parallel \
   --checkpoint.interval 2048 \
   --checkpoint.load_step -1 \
   --metrics.log_freq 1
+
+For DeepSpeed / multi-node training, configure via `accelerate config` first,
+then run `accelerate launch` as shown below.  You can also use `torchrun` directly
+since Accelerate detects the distributed environment automatically.
 '
 
 echo "Launching training..."
@@ -69,12 +70,9 @@ model=$(
   python -c "import fla, sys; from transformers import AutoConfig; print(AutoConfig.from_pretrained(sys.argv[1]).to_json_string())" "$config" | jq -r '.model_type'
 )
 
-mkdir -p $path
-cp * $path
-cp -r configs $path
-cp -r flame   $path
-cp -r 3rdparty/flash-linear-attention/fla $path
-cp -r 3rdparty/torchtitan/torchtitan $path
+mkdir -p "$path"
+cp -r configs "$path"
+cp -r flame   "$path"
 
 # for offline systems
 # export TRANSFORMERS_OFFLINE=1
@@ -83,7 +81,7 @@ cp -r 3rdparty/torchtitan/torchtitan $path
 if [ "$date" == "" ]; then
   date=$(date +%Y%m%d%H%M)
 fi
-RUN_NAME="$model-$(basename $path)"
+RUN_NAME="$model-$(basename "$path")"
 RUN_ID="$RUN_NAME-$date"
 
 export WANDB_RESUME=allow
@@ -98,24 +96,12 @@ if [[ -z "${WANDB_RUN_ID}" ]]; then
 fi
 
 PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True" \
-torchrun --nnodes=${NNODE} \
-  --nproc_per_node=${NGPU} \
-  --rdzv_backend c10d \
-  --rdzv_endpoint "${MASTER_ADDR}:${MASTER_PORT}" \
-  --local-ranks-filter ${LOG_RANK} \
-  --role rank \
-  --tee 3 \
-  --log-dir $path/logs \
+accelerate launch \
+  --num_machines="${NNODE}" \
+  --num_processes="${NGPU}" \
+  --main_process_ip="${MASTER_ADDR}" \
+  --main_process_port="${MASTER_PORT}" \
   -m flame.train \
   $params
 
 echo "TRAINING DONE!"
-echo "Converting the DCP checkpoints to HF format..."
-
-python -m flame.utils.convert_dcp_to_hf \
-  --path $path \
-  --step $steps \
-  --config $config \
-  --tokenizer $tokenizer
-
-echo "RUNNING DONE!"

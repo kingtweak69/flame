@@ -24,10 +24,8 @@ from typing import List, Union
 
 import torch.nn as nn
 
-from torchtitan.config_manager import JobConfig
-from torchtitan.distributed import ParallelDims
-from torchtitan.protocols.model_converter import ModelConverter, register_model_converter
-from torchtitan.tools.logging import logger
+from flame.logging import logger
+from flame.models.converter import ModelConverter, register_model_converter
 
 
 def _module_filter_fn(mod: nn.Module, fqn: str, filter_fqns: List[str]) -> bool:
@@ -55,7 +53,7 @@ class NvFp4Converter(ModelConverter):
         filter_fqns (list[str]): FQN substrings of modules to skip. Default: [].
     """
 
-    def __init__(self, job_config: JobConfig, parallel_dims: ParallelDims):
+    def __init__(self, job_config):
         self.enabled = False
 
         try:

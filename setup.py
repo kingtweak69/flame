@@ -37,7 +37,7 @@ setup(
     python_requires='>=3.10',
     install_requires=[
         'flash-linear-attention @ git+https://github.com/fla-org/flash-linear-attention.git@v0.5.2',
-        'torchtitan @ git+https://github.com/pytorch/torchtitan.git@0b44d4c',
+        'accelerate>=0.30.0',
         'torch',
         'torchdata',
         'transformers<5.0',

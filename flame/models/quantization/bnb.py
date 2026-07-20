@@ -29,10 +29,8 @@ from typing import List, Type, Union
 
 import torch.nn as nn
 
-from torchtitan.config_manager import JobConfig
-from torchtitan.distributed import ParallelDims
-from torchtitan.protocols.model_converter import ModelConverter, register_model_converter
-from torchtitan.tools.logging import logger
+from flame.logging import logger
+from flame.models.converter import ModelConverter, register_model_converter
 
 VALID_QUANT_TYPES = ("int8", "fp4", "nf4")
 
@@ -51,7 +49,7 @@ class BitsAndBytesConverter(ModelConverter):
         filter_fqns (list[str]): FQN substrings of modules to skip. Default: [].
     """
 
-    def __init__(self, job_config: JobConfig, parallel_dims: ParallelDims):
+    def __init__(self, job_config):
         self.enabled = False
 
         try:

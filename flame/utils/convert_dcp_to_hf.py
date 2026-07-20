@@ -11,7 +11,7 @@ import fla  # noqa
 import torch
 import torch.serialization
 from torch.distributed.checkpoint.format_utils import dcp_to_torch_save
-from torchtitan.tools.logging import init_logger, logger
+from flame.logging import init_logger, logger
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 import custom_models
